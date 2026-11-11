@@ -21,10 +21,9 @@ COPY forms/ .
 # self-host build sets none of this and ships no source maps.
 ARG POSTHOG_CLI_PROJECT_ID=""
 ARG POSTHOG_CLI_HOST=""
-RUN --mount=type=secret,id=posthog_cli_api_key,required=false \
-    export POSTHOG_CLI_PROJECT_ID="$POSTHOG_CLI_PROJECT_ID" && \
+RUN export POSTHOG_CLI_PROJECT_ID="$POSTHOG_CLI_PROJECT_ID" && \
     export POSTHOG_CLI_HOST="$POSTHOG_CLI_HOST" && \
-    export POSTHOG_CLI_API_KEY="$(cat /run/secrets/posthog_cli_api_key 2>/dev/null || true)" && \
+    export POSTHOG_CLI_API_KEY="${POSTHOG_CLI_API_KEY:-}" && \
     pnpm build && \
     if [ -n "$POSTHOG_CLI_PROJECT_ID" ] && [ -n "$POSTHOG_CLI_API_KEY" ]; then \
         pnpm sourcemaps:posthog; \
