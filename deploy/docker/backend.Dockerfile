@@ -2,7 +2,6 @@
 #
 # Default build is CGO-free (NATS + JSON) — no librdkafka, gcc, or musl-dev, so
 # it builds in a fraction of the time and cross-compiles to arm64/amd64 cleanly.
-# BuildKit cache mounts keep the module + compile caches warm across builds.
 #
 # The builder always runs on the build host ($BUILDPLATFORM) and cross-compiles
 # to $TARGETARCH, so multi-arch CI builds never run the Go compiler under QEMU.
@@ -22,12 +21,10 @@ RUN apk add --no-cache git ca-certificates && \
 
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN --mount=type=cache,id=gomod,target=/go/pkg/mod go mod download
+RUN go mod download
 
 COPY . .
-RUN --mount=type=cache,id=gomod,target=/go/pkg/mod \
-    --mount=type=cache,id=gobuild,target=/root/.cache/go-build \
-    set -eux; \
+RUN set -eux; \
     if echo "$GO_TAGS" | grep -qw kafka; then CGO=1; TAGS="musl kafka"; else CGO=0; TAGS=""; fi; \
     CGO_ENABLED=$CGO GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags "$TAGS" -ldflags="-s -w -X github.com/warmbly/warmbly/internal/version.Version=$VERSION -X github.com/warmbly/warmbly/internal/version.Commit=$COMMIT -X github.com/warmbly/warmbly/internal/version.BuiltAt=$BUILT_AT" -o /out/backend ./cmd/backend; \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -ldflags="-s -w -X github.com/warmbly/warmbly/internal/version.Version=$VERSION -X github.com/warmbly/warmbly/internal/version.Commit=$COMMIT -X github.com/warmbly/warmbly/internal/version.BuiltAt=$BUILT_AT" -o /out/seed ./cmd/seed; \
